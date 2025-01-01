@@ -1,0 +1,172 @@
+---
+import Layout from '../../../layouts/DashboardLayout.astro';
+
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+---
+
+<Layout title="Profil">
+ <div class="max-w-3xl mx-auto">
+   <div class="bg-white rounded-lg shadow p-6 space-y-6">
+     <!-- Användarinfo -->
+     <div>
+       <h2 class="text-lg font-semibold mb-4">Profilinformation</h2>
+       <div class="grid grid-cols-2 gap-4">
+         <div>
+           <label class="block text-sm text-gray-600">Email</label>
+           <p id="userEmail" class="text-gray-900"></p>
+         </div>
+       </div>
+     </div>
+
+     <!-- Abonnemang -->
+     <div class="border-t pt-6">
+       <h2 class="text-lg font-semibold mb-4">Abonnemang</h2>
+       <div id="subscriptionStatus">
+         <!-- Fylls i dynamiskt -->
+       </div>
+
+       <div class="mt-4" id="subscriptionForm">
+         <label class="block text-sm text-gray-600 mb-2">Välj antal månader</label>
+         <div class="flex gap-4">
+           <select id="monthSelect" class="rounded-lg border-gray-300 w-48">
+             <option value="1">1 månad (99 kr)</option>
+             <option value="3">3 månader (270 kr)</option>
+             <option value="6">6 månader (500 kr)</option>
+             <option value="12">12 månader (950 kr)</option>
+           </select>
+           <button 
+             id="subscribeBtn"
+             class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+           >
+             Aktivera abonnemang
+           </button>
+         </div>
+       </div>
+
+       <!-- Promocode -->
+       <div class="mt-6">
+         <label class="block text-sm text-gray-600 mb-2">Har du en kampanjkod?</label>
+         <div class="flex gap-2">
+           <input 
+             type="text" 
+             id="promoCode"
+             placeholder="Ange kod"
+             class="rounded-lg border-gray-300"
+           />
+           <button 
+             id="applyPromoBtn"
+             class="px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/10"
+           >
+             Aktivera kod
+           </button>
+         </div>
+       </div>
+     </div>
+   </div>
+ </div>
+</Layout>
+
+<script define:vars={{ supabaseUrl, supabaseKey }}>
+window.addEventListener('load', async () => {
+ const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+ 
+ // Hämta användarinfo
+ const { data: { session } } = await supabase.auth.getSession();
+ if (session?.user) {
+   document.getElementById('userEmail').textContent = session.user.email;
+ }
+
+ // Hämta abonnemangsstatus
+ const { data: subscription } = await supabase
+   .from('subscriptions')
+   .select('*')
+   .eq('user_id', session?.user.id)
+   .single();
+
+ updateSubscriptionStatus(subscription);
+
+ // Hantera promocode
+ document.getElementById('applyPromoBtn').addEventListener('click', async () => {
+   const code = document.getElementById('promoCode').value;
+   if (!code) return;
+
+   const { data, error } = await supabase
+     .from('promo_codes')
+     .select('*')
+     .eq('code', code)
+     .single();
+
+   if (error || !data) {
+     alert('Ogiltig kod');
+     return;
+   }
+
+   // Aktivera gratisperiod
+   const { error: subError } = await supabase
+     .from('subscriptions')
+     .upsert({
+       user_id: session.user.id,
+       status: 'trial',
+       current_period_end: new Date(Date.now() + data.duration_days * 24 * 60 * 60 * 1000)
+     });
+
+   if (subError) {
+     alert('Ett fel uppstod');
+     return;
+   }
+
+   alert('Kampanjkod aktiverad!');
+   location.reload();
+ });
+
+ // Hantera prenumeration
+ document.getElementById('subscribeBtn').addEventListener('click', async () => {
+   const months = document.getElementById('monthSelect').value;
+
+   try {
+     const response = await fetch('/api/create-checkout-session', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({
+         months: parseInt(months),
+         userId: session.user.id
+       })
+     });
+
+     const { url } = await response.json();
+     window.location = url;
+   } catch (error) {
+     console.error('Error:', error);
+     alert('Ett fel uppstod vid betalning');
+   }
+ });
+});
+
+function updateSubscriptionStatus(subscription) {
+ const statusEl = document.getElementById('subscriptionStatus');
+ 
+ if (!subscription || subscription.status !== 'active') {
+   statusEl.innerHTML = `
+     <div class="bg-red-50 p-4 rounded-lg">
+       <p class="text-red-800">Inget aktivt abonnemang</p>
+     </div>
+   `;
+ } else {
+   const endDate = new Date(subscription.current_period_end);
+   const formattedDate = endDate.toLocaleDateString('sv-SE', {
+     year: 'numeric',
+     month: 'long',
+     day: 'numeric'
+   });
+   
+   statusEl.innerHTML = `
+     <div class="bg-green-50 p-4 rounded-lg">
+       <p class="text-green-800">
+         Aktivt abonnemang till ${formattedDate}
+       </p>
+     </div>
+   `;
+ }
+}
+</script>

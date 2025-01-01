@@ -1,0 +1,442 @@
+---
+import Layout from '../../../layouts/DashboardLayout.astro';
+import AddProductForm from '../../../components/inventory/AddProductForm.astro';
+
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+---
+
+<Layout title="Inventering">
+ <div class="flex items-center justify-between mb-6">
+   <div class="flex gap-2">
+     <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary">
+       <span class="mr-1">Olika produkter:</span>
+       <span id="totalProducts">0</span>
+     </div>
+     <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary">
+       <span class="mr-1">Platser:</span>
+       <span id="totalLocations">0</span>
+     </div>
+   </div>
+
+   <div class="flex gap-2">
+     <button id="addProductButton"
+       class="inline-flex items-center px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors">
+       <span>Lägg till produkt</span>
+       <span class="ml-2 text-lg">+</span>
+     </button>
+     <a href="/dashboard/inventory/restock"
+       class="inline-flex items-center px-4 py-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors">
+       <span>Inköpslista</span>
+       <span class="ml-2 px-2 py-0.5 rounded-full bg-red-100 text-red-800 text-sm" id="needsRestock">0</span>
+     </a>
+   </div>
+ </div>
+
+ <div class="mb-6">
+   <div class="flex flex-wrap gap-2" id="locationFilters">
+     <button data-location="all"
+       class="px-3 py-1 rounded-full text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors">
+       Alla
+     </button>
+     <button data-location="none"
+       class="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors group relative">
+       Ej tilldelad plats
+     </button>
+   </div>
+ </div>
+
+ <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+   <div class="p-6 border-b border-gray-200">
+     <h2 class="text-lg font-semibold text-gray-900">Produkter</h2>
+   </div>
+   <div class="overflow-x-auto">
+     <table class="min-w-full divide-y divide-gray-200">
+       <thead class="bg-gray-50">
+         <tr>
+           <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center w-1/4">Produkt</th>
+           <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center w-1/6">Plats</th>
+           <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center w-1/6">Antal</th>
+           <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center w-1/6">Varningsnivå</th>
+           <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center w-1/6">Status</th>
+           <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center w-1/6">Åtgärder</th>
+         </tr>
+       </thead>
+       <tbody class="bg-white divide-y divide-gray-200" id="productsList">
+       </tbody>
+     </table>
+   </div>
+ </div>
+
+ <AddProductForm />
+</Layout>
+
+<script define:vars={{ supabaseUrl, supabaseKey }}>
+window.addEventListener('load', () => {
+ const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+ let selectedLocations = new Set();
+ let products = [];
+ let locations = [];
+
+ const loadLocations = async () => {
+   const { data: locationsData, error } = await supabase
+     .from('locations')
+     .select('*')
+     .order('name');
+   
+   if (!error && locationsData) {
+     locations = locationsData;
+     return locationsData;
+   }
+   return [];
+ };
+
+ document.getElementById('addProductButton')?.addEventListener('click', () => {
+   const modal = document.getElementById('addProductModal');
+   modal?.classList.remove('hidden');
+ });
+
+ window.deleteLocation = async (locationName) => {
+   const dialog = document.createElement('div');
+   dialog.innerHTML = `
+     <div class="fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+       <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+         <div class="flex items-center mb-4">
+           <div class="bg-red-100 p-2 rounded-full mr-3">
+             <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+             </svg>
+           </div>
+           <h3 class="text-lg font-semibold text-gray-900">Ta bort plats</h3>
+         </div>
+         <p class="text-gray-600 mb-6">Är du säker på att du vill ta bort platsen "${locationName}"? Detta går inte att ångra.</p>
+         <div class="flex justify-end gap-3">
+           <button 
+             onclick="this.closest('.fixed').remove()"
+             class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
+           >
+             Avbryt
+           </button>
+           <button 
+             onclick="handleDeleteLocation('${locationName}', this)"
+             class="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors duration-200"
+           >
+             Ta bort
+           </button>
+         </div>
+       </div>
+     </div>
+   `;
+   document.body.appendChild(dialog);
+ };
+
+ window.handleDeleteLocation = async (locationName, button) => {
+   try {
+     const { data: { session } } = await supabase.auth.getSession();
+     if (!session) throw new Error('Ingen aktiv session');
+
+     await supabase
+       .from('products')
+       .update({ location: null })
+       .eq('location', locationName)
+       .eq('user_id', session.user.id);
+
+     await supabase
+       .from('locations')
+       .delete()
+       .eq('name', locationName)
+       .eq('user_id', session.user.id);
+
+     button.closest('.fixed').remove();
+     selectedLocations.delete(locationName);
+     await loadData();
+   } catch (error) {
+     console.error('Error:', error);
+     alert('Ett fel uppstod: ' + error.message);
+   }
+ };
+
+ window.editProduct = async (id) => {
+   const { data: product, error } = await supabase
+     .from('products')
+     .select('*')
+     .eq('id', id)
+     .single();
+
+   if (product) {
+     const modal = document.getElementById('addProductModal');
+     const form = document.getElementById('addProductForm');
+     const modalTitle = document.getElementById('modalTitle');
+     const productId = document.getElementById('productId');
+     const locationToggle = document.getElementById('useLocation');
+     const locationFields = document.getElementById('locationFields');
+     const locationInput = document.getElementById('locationInput');
+
+     modalTitle.textContent = 'Redigera produkt';
+     productId.value = id;
+
+     form.querySelector('[name="productName"]').value = product.name;
+     form.querySelector('[name="currentQuantity"]').value = product.quantity;
+     form.querySelector('[name="warningLevel"]').value = product.warning_level;
+     form.querySelector('[name="restockAmount"]').value = product.restock_amount;
+     form.querySelector('[name="enableWarnings"]').checked = product.warnings_enabled;
+
+     if (product.location) {
+       locationToggle.checked = true;
+       locationFields.classList.remove('hidden');
+       locationInput.value = product.location;
+     } else {
+       locationToggle.checked = false;
+       locationFields.classList.add('hidden');
+       locationInput.value = '';
+     }
+
+     modal.classList.remove('hidden');
+   }
+ };
+
+ const loadData = async () => {
+   await loadLocations();
+   updateLocationFilters();
+   await loadProducts();
+ };
+
+ const loadProducts = async () => {
+   let query = supabase.from('products').select('*');
+   
+   if (selectedLocations.size > 0) {
+     if (selectedLocations.has('none')) {
+       query = query.is('location', null);
+     } else {
+       query = query.in('location', Array.from(selectedLocations));
+     }
+   }
+
+   const { data, error } = await query.order('name');
+   
+   if (data) {
+     products = data;
+     updateProductsList();
+     updateStats();
+   }
+ };
+
+ const updateLocationFilters = () => {
+   const container = document.getElementById('locationFilters');
+   const allLocations = ['all', 'none', ...locations.map(loc => loc.name)];
+   
+   container.innerHTML = allLocations.map(loc => {
+     const isSelected = selectedLocations.has(loc);
+     const isAll = loc === 'all';
+     const isNone = loc === 'none';
+     
+     return `
+       <button
+         data-location="${loc}"
+         class="px-3 py-1 rounded-full text-sm font-medium relative group
+           ${isSelected 
+             ? 'bg-primary text-white' 
+             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+           } transition-colors"
+       >
+         ${isAll ? 'Alla' : isNone ? 'Utan plats' : loc}
+         ${!isAll && !isNone ? `
+           <span class="absolute hidden group-hover:inline-flex -right-1 -top-1 h-4 w-4 items-center justify-center bg-red-100 text-red-600 rounded-full cursor-pointer hover:bg-red-200"
+                 onclick="deleteLocation('${loc}')">
+             &times;
+           </span>
+         ` : ''}
+       </button>
+     `;
+   }).join('');
+
+   container.querySelectorAll('button').forEach(btn => {
+     btn.addEventListener('click', (e) => {
+       if (e.target.closest('.group-hover\\:inline-flex')) return;
+       
+       const location = btn.dataset.location;
+       if (location === 'all') {
+         selectedLocations.clear();
+       } else {
+         if (selectedLocations.has('all')) {
+           selectedLocations.delete('all');
+         }
+         if (selectedLocations.has(location)) {
+           selectedLocations.delete(location);
+         } else {
+           selectedLocations.add(location);
+         }
+       }
+       updateLocationFilters();
+       loadProducts();
+     });
+   });
+ };
+
+ const updateProductsList = () => {
+   const container = document.getElementById('productsList');
+   if (products.length === 0) {
+     container.innerHTML = `
+       <tr>
+         <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+           Inga produkter tillagda än
+         </td>
+       </tr>
+     `;
+     return;
+   }
+
+   container.innerHTML = products.map(product => `
+     <tr>
+       <td class="px-6 py-4 whitespace-nowrap text-center">${product.name}</td>
+       <td class="px-6 py-4 whitespace-nowrap text-center">${product.location || '-'}</td>
+       <td class="px-6 py-4 whitespace-nowrap">
+         <div class="flex items-center justify-center space-x-2">
+           <button 
+             onclick="updateQuantity('${product.id}', ${product.quantity - 1})"
+             class="p-1 rounded-lg hover:bg-gray-100"
+           >
+             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+             </svg>
+           </button>
+           
+           <input 
+             type="number" 
+             value="${product.quantity}"
+             min="0"
+             class="w-16 text-center border-gray-300 rounded-md focus:border-primary focus:ring-primary"
+             onchange="updateQuantity('${product.id}', parseInt(this.value))"
+           />
+           
+           <button 
+             onclick="updateQuantity('${product.id}', ${product.quantity + 1})"
+             class="p-1 rounded-lg hover:bg-gray-100"
+           >
+             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+             </svg>
+           </button>
+         </div>
+       </td>
+       <td class="px-6 py-4 whitespace-nowrap text-center">${product.warning_level}</td>
+       <td class="px-6 py-4 whitespace-nowrap">
+         <div class="flex justify-center">
+           ${getStatusBadge(product)}
+         </div>
+       </td>
+       <td class="px-6 py-4 whitespace-nowrap">
+         <div class="flex justify-center space-x-2">
+           <button 
+             onclick="editProduct('${product.id}')"
+             class="text-primary hover:text-primary/80 transition-colors"
+           >
+             Redigera
+           </button>
+           <button 
+             onclick="deleteProduct('${product.id}')"
+             class="text-red-600 hover:text-red-800 transition-colors"
+           >
+             Ta bort
+           </button>
+         </div>
+       </td>
+     </tr>
+   `).join('');
+   };
+
+   const updateStats = () => {
+    document.getElementById('totalProducts').textContent = products.length;
+    document.getElementById('needsRestock').textContent = 
+      products.filter(p => p.quantity <= p.warning_level).length;
+    document.getElementById('totalLocations').textContent = locations.length;
+  };
+
+  const getStatusBadge = (product) => {
+    if (!product.warnings_enabled) return `
+      <span class="px-2 py-1 text-gray-600 text-xs">
+        Varningar avstängda
+      </span>
+    `;
+
+    if (product.quantity <= product.warning_level) return `
+      <span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
+        Lågt lager
+      </span>
+    `;
+
+    return `
+      <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+        OK
+      </span>
+    `;
+  };
+
+  window.updateQuantity = async (id, newQuantity) => {
+    if (newQuantity < 0) return;
+    
+    const { error } = await supabase
+      .from('products')
+      .update({ quantity: newQuantity })
+      .eq('id', id);
+
+    if (!error) {
+      loadProducts();
+    }
+  };
+
+  window.deleteProduct = (id) => {
+    const dialog = document.createElement('div');
+    dialog.innerHTML = `
+      <div class="fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+          <div class="flex items-center mb-4">
+            <div class="bg-red-100 p-2 rounded-full mr-3">
+              <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900">Ta bort produkt</h3>
+          </div>
+          <p class="text-gray-600 mb-6">Är du säker på att du vill ta bort denna produkt? Detta går inte att ångra.</p>
+          <div class="flex justify-end gap-3">
+            <button 
+              onclick="this.closest('.fixed').remove()"
+              class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
+            >
+              Avbryt
+            </button>
+            <button 
+              onclick="handleDeleteProduct('${id}', this)"
+              class="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors duration-200"
+            >
+              Ta bort
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(dialog);
+  };
+
+  window.handleDeleteProduct = async (id, button) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      button.closest('.fixed').remove();
+      loadProducts();
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Ett fel uppstod: ' + error.message);
+    }
+  };
+
+  // Initial load
+  loadData();
+});
+</script>

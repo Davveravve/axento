@@ -1,0 +1,278 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Axento - Welcome">
+  <main class="min-h-screen bg-gradient-to-br from-primary to-blue-600 relative flex items-center justify-center overflow-hidden">
+    <!-- Background effects -->
+    <div class="falling-circles">
+      <div class="circle"></div>
+      <div class="circle"></div>
+      <div class="circle"></div>
+      <div class="circle"></div>
+      <div class="circle"></div>
+      <div class="circle"></div>
+      <div class="circle"></div>
+      <div class="circle"></div>
+      <div class="circle giant"></div>
+      <div class="circle giant"></div>
+    </div>
+
+    <!-- Blur overlay -->
+    <div class="blur-overlay"></div>
+
+    <!-- Floating particles -->
+    <div class="particles">
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+    </div>
+
+    <!-- Welcome content -->
+    <div class="relative text-center px-6 py-12 max-w-3xl bg-white bg-opacity-10 backdrop-blur-md rounded-lg shadow-lg border border-white border-opacity-20 hover:bg-opacity-15 transition-all duration-500 z-10">
+      <div class="glow-effect"></div>
+      <h1 class="text-5xl font-extrabold text-white mb-6 transition-transform duration-300 hover:scale-110">
+       Axento
+      </h1>
+      <p class="text-lg text-white mb-8">
+        Portalen för företagare – hantera din verksamhet enkelt. Lägg till produkter, spåra lager och håll koll på inköpslistor för att alltid ha full kontroll
+      </p>
+      <div class="space-x-4 relative z-20">
+        <a
+          href="/login"
+          class="inline-block bg-white text-primary px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
+        >
+          Logga in
+        </a>
+        <a
+          href="/register"
+          class="inline-block bg-transparent text-white border-2 border-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl hover:bg-white hover:text-primary transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
+        >
+          Skapa konto
+        </a>
+      </div>
+      <div class="mt-20">
+        <p class="text-sm text-white italic">
+          "Axento - Smarta lösningar för företag. Utforska framtidens verktyg redan idag."
+        </p>
+      </div>
+
+      <div class="mt-4">
+        <p class="text-sm text-white italic">
+          49kr / Månad - Betala för en månad i taget
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <style>
+    /* Reset and base styles */
+    * {
+      position: relative;
+    }
+
+    /* Blur overlay */
+    .blur-overlay {
+      position: absolute;
+      inset: 0;
+      backdrop-filter: blur(3px);
+      background: rgba(255, 255, 255, 0.05);
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .falling-circles {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .circle {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(8px);
+      border-radius: 50%;
+      animation: fall linear infinite;
+      top: -200px;
+      opacity: 0;
+      will-change: transform, opacity;
+    }
+
+    .circle.giant {
+      width: 400px;
+      height: 400px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(15px);
+      top: -600px; /* Flyttat upp startpositionen för stora cirklar */
+    }
+
+    /* Distribuera cirklarnas startpositioner */
+    .circle:nth-child(1) {
+      width: 150px;
+      height: 150px;
+      left: 10%;
+      animation-duration: 15s;
+      animation-delay: -7s;
+    }
+
+    .circle:nth-child(2) {
+      width: 100px;
+      height: 100px;
+      left: 30%;
+      animation-duration: 18s;
+      animation-delay: -5s;
+    }
+
+    .circle:nth-child(3) {
+      width: 80px;
+      height: 80px;
+      left: 50%;
+      animation-duration: 13s;
+      animation-delay: -9s;
+    }
+
+    .circle:nth-child(4) {
+      width: 120px;
+      height: 120px;
+      left: 70%;
+      animation-duration: 16s;
+      animation-delay: -3s;
+    }
+
+    .circle:nth-child(5) {
+      width: 90px;
+      height: 90px;
+      left: 85%;
+      animation-duration: 14s;
+      animation-delay: -6s;
+    }
+
+    .circle:nth-child(6) {
+      width: 110px;
+      height: 110px;
+      left: 20%;
+      animation-duration: 17s;
+      animation-delay: -4s;
+    }
+
+    .circle:nth-child(7) {
+      width: 70px;
+      height: 70px;
+      left: 40%;
+      animation-duration: 12s;
+      animation-delay: -8s;
+    }
+
+    .circle:nth-child(8) {
+      width: 130px;
+      height: 130px;
+      left: 60%;
+      animation-duration: 19s;
+      animation-delay: -2s;
+    }
+
+    .circle:nth-child(9) {
+      left: 15%;
+      animation-duration: 25s;
+      animation-delay: -15s; /* Längre delay för stora cirklar */
+    }
+
+    .circle:nth-child(10) {
+      left: 75%;
+      animation-duration: 22s;
+      animation-delay: -12s; /* Längre delay för stora cirklar */
+    }
+
+    @keyframes fall {
+      0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: var(--start-opacity, 0.5);
+      }
+      100% {
+        transform: translateY(1200px) rotate(360deg);
+        opacity: var(--end-opacity, 0.3);
+      }
+    }
+
+    /* Particle effects */
+    .particles {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: white;
+      border-radius: 50%;
+      animation: float 20s linear infinite;
+      opacity: 0.3;
+    }
+
+    .particle:nth-child(1) { --particle-offset: 20%; }
+    .particle:nth-child(2) { --particle-offset: 40%; }
+    .particle:nth-child(3) { --particle-offset: 60%; }
+    .particle:nth-child(4) { --particle-offset: 80%; }
+    .particle:nth-child(5) { --particle-offset: 90%; }
+
+    @keyframes float {
+      0% {
+        transform: translate(calc(var(--particle-offset) - 10%), -10%) rotate(0deg);
+      }
+      100% {
+        transform: translate(calc(var(--particle-offset) + 10%), 110%) rotate(360deg);
+      }
+    }
+
+    /* Glow effect */
+    .glow-effect {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.5s;
+      pointer-events: none;
+    }
+
+    /* Custom styles for circles */
+    .circle:nth-child(odd) {
+      --start-opacity: 0.6;
+      --end-opacity: 0.2;
+    }
+
+    .circle:nth-child(even) {
+      --start-opacity: 0.4;
+      --end-opacity: 0.1;
+    }
+
+    /* Main container hover effects */
+    main:hover .glow-effect {
+      opacity: 1;
+    }
+
+    main:hover .particle {
+      animation-duration: 15s;
+    }
+
+    /* Prevent FOUC */
+    :root {
+      color-scheme: dark;
+    }
+  </style>
+
+  <script>
+    // Prevent initial animation reset
+    document.addEventListener('DOMContentLoaded', () => {
+      const circles = document.querySelectorAll('.circle');
+      circles.forEach(circle => {
+        circle.style.opacity = '1';
+      });
+    });
+  </script>
+</Layout>

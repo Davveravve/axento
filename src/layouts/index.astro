@@ -1,0 +1,28 @@
+// src/pages/dashboard/index.astro
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout title="Dashboard">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="bg-white p-6 rounded-lg shadow-sm">
+      <h3 class="text-lg font-semibold mb-2">Totalt antal produkter</h3>
+      <p class="text-3xl font-bold text-primary">0</p>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow-sm">
+      <h3 class="text-lg font-semibold mb-2">Produkter att beställa</h3>
+      <p class="text-3xl font-bold text-red-600">0</p>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow-sm">
+      <h3 class="text-lg font-semibold mb-2">Senast uppdaterad</h3>
+      <p class="text-gray-600">Aldrig</p>
+    </div>
+  </div>
+
+  <div class="mt-8 bg-white p-6 rounded-lg shadow-sm">
+    <h3 class="text-lg font-semibold mb-4">Senaste aktiviteter</h3>
+    <p class="text-gray-600">Ingen aktivitet ännu</p>
+  </div>
+</DashboardLayout>

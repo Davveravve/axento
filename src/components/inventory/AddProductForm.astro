@@ -1,0 +1,236 @@
+<!-- AddProductForm.astro -->
+---
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+---
+
+<div id="addProductModal" class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-lg max-w-md w-full shadow-xl">
+    <div class="flex justify-between items-center p-6 border-b border-gray-200">
+      <h2 class="text-xl font-semibold text-gray-900" id="modalTitle">Lägg till produkt</h2>
+      <button id="closeModal" class="text-gray-400 hover:text-gray-500 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <form id="addProductForm" class="p-6 space-y-4">
+      <input type="hidden" name="productId" id="productId" />
+      
+      <div>
+        <label for="productName" class="block text-sm font-medium text-gray-700">Produktnamn</label>
+        <input type="text" id="productName" name="productName" required 
+               class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-primary focus:ring-primary"/>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="useLocation" class="sr-only peer">
+          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+          <span class="ms-3 text-sm font-medium text-gray-700">Ange plats</span>
+        </label>
+      </div>
+
+      <div id="locationFields" class="hidden space-y-4 relative">
+        <div>
+          <label for="locationInput" class="block text-sm font-medium text-gray-700">Plats</label>
+          <div class="mt-1 relative">
+            <input type="text" 
+                  id="locationInput" 
+                  class="block w-full rounded-md border border-gray-300 shadow-sm focus:border-primary focus:ring-primary" 
+                  placeholder="Välj eller skriv platsnamn"
+                  autocomplete="off"/>
+            
+            <div id="locationDropdown" class="hidden absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+              <ul class="max-h-48 overflow-y-auto py-1" id="locationOptions"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label for="currentQuantity" class="block text-sm font-medium text-gray-700">Nuvarande antal</label>
+        <input type="number" id="currentQuantity" name="currentQuantity" min="0" required 
+               class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-primary focus:ring-primary"/>
+      </div>
+
+      <div>
+        <label for="warningLevel" class="block text-sm font-medium text-gray-700">Varna vid antal</label>
+        <input type="number" id="warningLevel" name="warningLevel" min="0" required 
+               class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-primary focus:ring-primary"/>
+      </div>
+
+      <div>
+        <label for="restockAmount" class="block text-sm font-medium text-gray-700">Påfyllnadsmängd</label>
+        <input type="number" id="restockAmount" name="restockAmount" min="0" required 
+               class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-primary focus:ring-primary"/>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" name="enableWarnings" checked class="sr-only peer">
+          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+          <span class="ms-3 text-sm font-medium text-gray-700">Aktivera varningar</span>
+        </label>
+      </div>
+
+      <div class="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
+        <button type="button" id="cancelBtn" 
+                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+          Avbryt
+        </button>
+        <button type="submit" 
+                class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+          Spara
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script define:vars={{ supabaseUrl, supabaseKey }}>
+  window.addEventListener('load', () => {
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    
+    const modal = document.getElementById('addProductModal');
+    const form = document.getElementById('addProductForm');
+    const modalTitle = document.getElementById('modalTitle');
+    const closeBtn = document.getElementById('closeModal');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const locationToggle = document.getElementById('useLocation');
+    const locationFields = document.getElementById('locationFields');
+    const locationInput = document.getElementById('locationInput');
+    const locationDropdown = document.getElementById('locationDropdown');
+    const locationOptions = document.getElementById('locationOptions');
+    const productIdInput = document.getElementById('productId');
+
+    const closeModal = () => {
+      modal.classList.add('hidden');
+      form.reset();
+      locationFields.classList.add('hidden');
+      locationToggle.checked = false;
+      modalTitle.textContent = 'Lägg till produkt';
+      productIdInput.value = '';
+      locationDropdown.classList.add('hidden');
+    };
+
+    closeBtn?.addEventListener('click', closeModal);
+    cancelBtn?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    locationToggle?.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        locationFields.classList.remove('hidden');
+        loadLocations();
+      } else {
+        locationFields.classList.add('hidden');
+        locationInput.value = '';
+      }
+    });
+
+    const loadLocations = async () => {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .order('name');
+      
+      if (!error && data) {
+        updateLocationOptions(data);
+      }
+    };
+
+    const updateLocationOptions = (locations) => {
+      locationOptions.innerHTML = locations.map(loc => `
+        <li class="px-4 py-2 hover:bg-gray-100 cursor-pointer" data-value="${loc.name}">
+          ${loc.name}
+        </li>
+      `).join('');
+    };
+
+    locationInput.addEventListener('focus', () => {
+      locationDropdown.classList.remove('hidden');
+      loadLocations();
+    });
+
+    locationOptions.addEventListener('click', (e) => {
+      const li = e.target.closest('li');
+      if (li) {
+        locationInput.value = li.dataset.value;
+        locationDropdown.classList.add('hidden');
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!locationInput.contains(e.target) && !locationDropdown.contains(e.target)) {
+        locationDropdown.classList.add('hidden');
+      }
+    });
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const productId = document.getElementById('productId').value;
+      
+      try {
+        const { data: { session }} = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('Ingen aktiv session hittades');
+        }
+
+        const productData = {
+          name: formData.get('productName'),
+          location: locationToggle.checked ? locationInput.value : null,
+          quantity: parseInt(formData.get('currentQuantity')),
+          warning_level: parseInt(formData.get('warningLevel')),
+          restock_amount: parseInt(formData.get('restockAmount')),
+          warnings_enabled: formData.get('enableWarnings') === 'on',
+          user_id: session.user.id
+        };
+
+        if (locationToggle.checked && locationInput.value) {
+          const { data: existingLocation } = await supabase
+            .from('locations')
+            .select('name')
+            .eq('name', locationInput.value)
+            .single();
+
+          if (!existingLocation) {
+            const { error: locationError } = await supabase
+              .from('locations')
+              .insert([{ 
+                name: locationInput.value,
+                user_id: session.user.id
+              }]);
+            
+            if (locationError) throw locationError;
+          }
+        }
+
+        let error;
+        if (productId) {
+          const { error: updateError } = await supabase
+            .from('products')
+            .update(productData)
+            .eq('id', productId);
+          error = updateError;
+        } else {
+          const { error: insertError } = await supabase
+            .from('products')
+            .insert([productData]);
+          error = insertError;
+        }
+
+        if (error) throw error;
+
+        closeModal();
+        window.location.reload();
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Ett fel uppstod när produkten skulle sparas: ' + error.message);
+      }
+    });
+  });
+</script>
