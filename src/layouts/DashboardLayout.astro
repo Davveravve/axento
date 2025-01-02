@@ -20,8 +20,22 @@ const { title } = Astro.props;
    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
  </head>
  <body class="bg-gray-50">
-   <div class="min-h-screen flex">
-     <aside class="bg-white w-56 border-r border-gray-200 fixed inset-y-0">
+   <div class="min-h-screen">
+     <!-- Header -->
+     <header class="bg-white border-b border-gray-200 h-16 fixed w-full z-20 top-0">
+       <div class="flex items-center justify-between h-full px-4">
+         <button id="menuBtn" class="p-2 hover:bg-gray-100 rounded-lg">
+           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+           </svg>
+         </button>
+         <h2 class="text-lg font-semibold flex-1 text-center">{title}</h2>
+         <div class="w-10"></div> <!-- Spacer for balance -->
+       </div>
+     </header>
+
+     <!-- Sidebar -->
+     <aside id="sidebar" class="bg-white w-64 fixed inset-y-0 left-0 transform -translate-x-full transition-transform duration-300 ease-in-out z-30">
        <div class="flex items-center h-16 border-b border-gray-200 px-4">
          <h1 class="text-xl font-bold text-primary">Axento</h1>
        </div>
@@ -46,12 +60,11 @@ const { title } = Astro.props;
                  </svg>
                  Inventering
                </a>
-               <!-- Fler program här -->
              </div>
            </div>
          </nav>
 
-         <div class="p-4 space-y-2">
+         <div class="p-4 space-y-2 border-t border-gray-200">
            <a href="/dashboard/profile" 
               class="flex items-center gap-2 text-gray-700 hover:bg-gray-100 p-2 rounded-lg">
              <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
@@ -71,17 +84,13 @@ const { title } = Astro.props;
        </div>
      </aside>
 
-     <div class="flex-1 ml-56">
-       <header class="bg-white border-b border-gray-200 h-16 fixed w-[calc(100%-14rem)] z-10">
-         <div class="flex items-center justify-between h-full px-6">
-           <h2 class="text-lg font-semibold">{title}</h2>
-         </div>
-       </header>
+     <!-- Backdrop -->
+     <div id="menuBackdrop" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden"></div>
 
-       <main class="p-6 mt-16">
-         <slot />
-       </main>
-     </div>
+     <!-- Main content -->
+     <main class="p-4 mt-16">
+       <slot />
+     </main>
    </div>
  </body>
 </html>
@@ -89,7 +98,23 @@ const { title } = Astro.props;
 <script define:vars={{ supabaseUrl, supabaseKey }}>
  document.addEventListener('DOMContentLoaded', async () => {
    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+   const menuBtn = document.getElementById('menuBtn');
+   const sidebar = document.getElementById('sidebar');
+   const backdrop = document.getElementById('menuBackdrop');
 
+   // Menu handlers
+   menuBtn?.addEventListener('click', () => {
+     sidebar.classList.toggle('-translate-x-full');
+     backdrop.classList.toggle('hidden');
+   });
+
+   // Close menu when clicking backdrop
+   backdrop?.addEventListener('click', () => {
+     sidebar.classList.add('-translate-x-full');
+     backdrop.classList.add('hidden');
+   });
+
+   // Auth setup
    const setupAuth = async () => {
      const { data: { session } } = await supabase.auth.getSession();
      
