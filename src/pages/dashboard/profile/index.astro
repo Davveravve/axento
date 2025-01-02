@@ -1,172 +1,437 @@
 ---
 import Layout from '../../../layouts/DashboardLayout.astro';
 
+
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 ---
 
 <Layout title="Profil">
- <div class="max-w-3xl mx-auto">
-   <div class="bg-white rounded-lg shadow p-6 space-y-6">
-     <!-- Användarinfo -->
-     <div>
-       <h2 class="text-lg font-semibold mb-4">Profilinformation</h2>
-       <div class="grid grid-cols-2 gap-4">
-         <div>
-           <label class="block text-sm text-gray-600">Email</label>
-           <p id="userEmail" class="text-gray-900"></p>
-         </div>
-       </div>
-     </div>
+  <div class="max-w-4xl mx-auto space-y-6">
+    <!-- Användarinfo -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+      <h2 class="text-lg font-semibold mb-4">Profilinformation</h2>
+      <div class="flex items-center gap-4">
+        <div class="bg-gray-100 p-3 rounded-full">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="userEmail" class="text-gray-900 font-medium"></span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p id="lastLogin" class="text-sm text-gray-500 mt-1"></p>
+        </div>
+      </div>
+    </div>
 
-     <!-- Abonnemang -->
-     <div class="border-t pt-6">
-       <h2 class="text-lg font-semibold mb-4">Abonnemang</h2>
-       <div id="subscriptionStatus">
-         <!-- Fylls i dynamiskt -->
-       </div>
+    <!-- Prenumeration -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+      <h2 class="text-lg font-semibold mb-4">Prenumeration</h2>
+      
+      <!-- Status -->
+      <div id="subscriptionStatus" class="mb-6">
+        <!-- Fylls i dynamiskt -->
+      </div>
 
-       <div class="mt-4" id="subscriptionForm">
-         <label class="block text-sm text-gray-600 mb-2">Välj antal månader</label>
-         <div class="flex gap-4">
-           <select id="monthSelect" class="rounded-lg border-gray-300 w-48">
-             <option value="1">1 månad (99 kr)</option>
-             <option value="3">3 månader (270 kr)</option>
-             <option value="6">6 månader (500 kr)</option>
-             <option value="12">12 månader (950 kr)</option>
-           </select>
-           <button 
-             id="subscribeBtn"
-             class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
-           >
-             Aktivera abonnemang
-           </button>
-         </div>
-       </div>
+      <!-- Prisalternativ -->
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="subscription-card border rounded-lg p-4 hover:border-primary transition-colors cursor-pointer" data-months="1">
+          <div class="text-lg font-semibold mb-2">1 månad</div>
+          <div class="text-2xl font-bold text-primary mb-2">49 kr</div>
+          <ul class="text-sm text-gray-600 space-y-2">
+            <li>• Obegränsat antal produkter</li>
+            <li>• Lagerhantering</li>
+            <li>• Support via mail</li>
+          </ul>
+        </div>
+        
+        <div class="subscription-card border rounded-lg p-4 hover:border-primary transition-colors cursor-pointer" data-months="3">
+          <div class="text-lg font-semibold mb-2">3 månader</div>
+          <div class="text-2xl font-bold text-primary mb-2">129 kr</div>
+          <div class="text-sm text-green-600 mb-2">Spara 18 kr</div>
+          <ul class="text-sm text-gray-600 space-y-2">
+            <li>• Obegränsat antal produkter</li>
+            <li>• Lagerhantering</li>
+            <li>• Support via mail</li>
+          </ul>
+        </div>
+        
+        <div class="subscription-card border rounded-lg p-4 hover:border-primary transition-colors cursor-pointer relative overflow-hidden" data-months="6">
+          <div class="absolute -right-8 top-3 bg-primary text-white text-sm px-8 py-1 rotate-45">
+            Populär
+          </div>
+          <div class="text-lg font-semibold mb-2">6 månader</div>
+          <div class="text-2xl font-bold text-primary mb-2">249 kr</div>
+          <div class="text-sm text-green-600 mb-2">Spara 45 kr</div>
+          <ul class="text-sm text-gray-600 space-y-2">
+            <li>• Obegränsat antal produkter</li>
+            <li>• Lagerhantering</li>
+            <li>• Support via mail</li>
+          </ul>
+        </div>
+        
+        <div class="subscription-card border rounded-lg p-4 hover:border-primary transition-colors cursor-pointer" data-months="12">
+          <div class="text-lg font-semibold mb-2">12 månader</div>
+          <div class="text-2xl font-bold text-primary mb-2">449 kr</div>
+          <div class="text-sm text-green-600 mb-2">Spara 139 kr</div>
+          <ul class="text-sm text-gray-600 space-y-2">
+            <li>• Obegränsat antal produkter</li>
+            <li>• Lagerhantering</li>
+            <li>• Support via mail</li>
+          </ul>
+        </div>
+      </div>
 
-       <!-- Promocode -->
-       <div class="mt-6">
-         <label class="block text-sm text-gray-600 mb-2">Har du en kampanjkod?</label>
-         <div class="flex gap-2">
-           <input 
-             type="text" 
-             id="promoCode"
-             placeholder="Ange kod"
-             class="rounded-lg border-gray-300"
-           />
-           <button 
-             id="applyPromoBtn"
-             class="px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/10"
-           >
-             Aktivera kod
-           </button>
-         </div>
-       </div>
-     </div>
-   </div>
- </div>
+      <!-- Kampanjkod -->
+      <div class="mt-6">
+        <label class="block text-sm text-gray-600 mb-2">Har du en kampanjkod?</label>
+        <div class="flex gap-2">
+          <input 
+            type="text" 
+            id="promoCode"
+            placeholder="Ange kod"
+            class="rounded-lg border-gray-300"
+          />
+          <button 
+            id="applyPromoBtn"
+            class="px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/10"
+          >
+            Aktivera kod
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kontoinställningar -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+      <h2 class="text-lg font-semibold mb-4">Kontoinställningar</h2>
+      <div class="space-y-4">
+        <button 
+          id="changePasswordBtn"
+          class="w-full flex items-center justify-between px-4 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+            <span>Ändra lösenord</span>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+          </svg>
+        </button>
+
+        <button 
+          id="deleteAccountBtn"
+          class="w-full flex items-center justify-between px-4 py-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+        >
+          <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            <span class="text-red-600">Radera konto</span>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+  <!-- Change Password Modal -->
+  <div id="changePasswordModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg max-w-md w-full p-6">
+      <h3 class="text-lg font-semibold mb-4">Ändra lösenord</h3>
+      <form id="changePasswordForm" class="space-y-4">
+        <div>
+          <label for="newPassword" class="block text-sm font-medium text-gray-700">Nytt lösenord</label>
+          <input
+            type="password"
+            id="newPassword"
+            required
+            minlength="6"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+          />
+        </div>
+        <div>
+          <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Bekräfta lösenord</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            required
+            minlength="6"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+          />
+        </div>
+        <div class="flex justify-end gap-3">
+          <button
+            type="button"
+            onclick="closeChangePasswordModal()"
+            class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
+          >
+            Avbryt
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+          >
+            Spara
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Account Modal -->
+  <div id="deleteAccountModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg max-w-md w-full p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="bg-red-100 p-2 rounded-full">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold">Radera konto</h3>
+      </div>
+      <p class="text-gray-600 mb-4">
+        Är du säker på att du vill radera ditt konto? Denna åtgärd kan inte ångras och all din data kommer att raderas permanent.
+      </p>
+      <div class="flex justify-end gap-3">
+        <button
+          onclick="closeDeleteAccountModal()"
+          class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
+        >
+          Avbryt
+        </button>
+        <button
+          onclick="confirmDeleteAccount()"
+          class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+        >
+          Radera konto
+        </button>
+      </div>
+    </div>
+  </div>
 </Layout>
 
 <script define:vars={{ supabaseUrl, supabaseKey }}>
 window.addEventListener('load', async () => {
- const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
- 
- // Hämta användarinfo
- const { data: { session } } = await supabase.auth.getSession();
- if (session?.user) {
-   document.getElementById('userEmail').textContent = session.user.email;
- }
+  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+  
+  // Hämta användarinfo
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) {
+    document.getElementById('userEmail').textContent = session.user.email;
+    
+    // Visa senaste inloggning
+    const lastLoginDate = new Date(session.user.last_sign_in_at);
+    const formattedDate = lastLoginDate.toLocaleDateString('sv-SE', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    document.getElementById('lastLogin').textContent = `Senast inloggad: ${formattedDate}`;
+  }
 
- // Hämta abonnemangsstatus
- const { data: subscription } = await supabase
-   .from('subscriptions')
-   .select('*')
-   .eq('user_id', session?.user.id)
-   .single();
+  // Hämta abonnemangsstatus
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('user_id', session?.user.id)
+    .single();
 
- updateSubscriptionStatus(subscription);
+  updateSubscriptionStatus(subscription);
 
- // Hantera promocode
- document.getElementById('applyPromoBtn').addEventListener('click', async () => {
-   const code = document.getElementById('promoCode').value;
-   if (!code) return;
+  // Modal handlers
+  window.closeChangePasswordModal = () => {
+    document.getElementById('changePasswordModal').classList.add('hidden');
+    document.getElementById('changePasswordForm').reset();
+  };
 
-   const { data, error } = await supabase
-     .from('promo_codes')
-     .select('*')
-     .eq('code', code)
-     .single();
+  window.closeDeleteAccountModal = () => {
+    document.getElementById('deleteAccountModal').classList.add('hidden');
+  };
 
-   if (error || !data) {
-     alert('Ogiltig kod');
-     return;
-   }
+  // Hantera byte av lösenord
+  document.getElementById('changePasswordForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
 
-   // Aktivera gratisperiod
-   const { error: subError } = await supabase
-     .from('subscriptions')
-     .upsert({
-       user_id: session.user.id,
-       status: 'trial',
-       current_period_end: new Date(Date.now() + data.duration_days * 24 * 60 * 60 * 1000)
-     });
+    if (newPassword !== confirmPassword) {
+      alert('Lösenorden matchar inte');
+      return;
+    }
 
-   if (subError) {
-     alert('Ett fel uppstod');
-     return;
-   }
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
 
-   alert('Kampanjkod aktiverad!');
-   location.reload();
- });
+      if (error) throw error;
 
- // Hantera prenumeration
- document.getElementById('subscribeBtn').addEventListener('click', async () => {
-   const months = document.getElementById('monthSelect').value;
+      alert('Lösenord uppdaterat');
+      closeChangePasswordModal();
+    } catch (error) {
+      alert('Ett fel uppstod: ' + error.message);
+    }
+  });
 
-   try {
-     const response = await fetch('/api/create-checkout-session', {
-       method: 'POST',
-       headers: { 'Content-Type': 'application/json' },
-       body: JSON.stringify({
-         months: parseInt(months),
-         userId: session.user.id
-       })
-     });
+  // Öppna modaler
+  document.getElementById('changePasswordBtn')?.addEventListener('click', () => {
+    document.getElementById('changePasswordModal').classList.remove('hidden');
+  });
 
-     const { url } = await response.json();
-     window.location = url;
-   } catch (error) {
-     console.error('Error:', error);
-     alert('Ett fel uppstod vid betalning');
-   }
- });
+  document.getElementById('deleteAccountBtn')?.addEventListener('click', () => {
+    document.getElementById('deleteAccountModal').classList.remove('hidden');
+  });
+
+  // Hantera radering av konto
+  window.confirmDeleteAccount = async () => {
+    try {
+      // Radera användardata
+      const { error: dataError } = await supabase
+        .from('products')
+        .delete()
+        .eq('user_id', session.user.id);
+
+      if (dataError) throw dataError;
+
+      // Radera platser
+      const { error: locationsError } = await supabase
+        .from('locations')
+        .delete()
+        .eq('user_id', session.user.id);
+
+      if (locationsError) throw locationsError;
+
+      // Radera användaren
+      const { error: userError } = await supabase.auth.admin.deleteUser(
+        session.user.id
+      );
+
+      if (userError) throw userError;
+
+      window.location.href = '/';
+    } catch (error) {
+      alert('Ett fel uppstod: ' + error.message);
+    }
+  };
+
+  // Hantera promocode
+  document.getElementById('applyPromoBtn').addEventListener('click', async () => {
+    const code = document.getElementById('promoCode').value;
+    if (!code) return;
+
+    const { data, error } = await supabase
+      .from('promo_codes')
+      .select('*')
+      .eq('code', code)
+      .single();
+
+    if (error || !data) {
+      alert('Ogiltig kod');
+      return;
+    }
+
+    // Aktivera gratisperiod
+    const { error: subError } = await supabase
+      .from('subscriptions')
+      .upsert({
+        user_id: session.user.id,
+        status: 'trial',
+        current_period_end: new Date(Date.now() + data.duration_days * 24 * 60 * 60 * 1000)
+      });
+
+    if (subError) {
+      alert('Ett fel uppstod');
+      return;
+    }
+
+    alert('Kampanjkod aktiverad!');
+    location.reload();
+  });
+
+  // Lägg till click handlers på prenumerationskorten
+  document.querySelectorAll('.subscription-card').forEach(card => {
+    card.addEventListener('click', async () => {
+      try {
+        const months = parseInt(card.dataset.months);
+        
+        const response = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            months,
+            userId: session.user.id
+          })
+        });
+
+        const { url, error } = await response.json();
+        if (error) throw new Error(error);
+
+        // Omdirigera till Stripe Checkout
+        window.location.href = url;
+      } catch (error) {
+        console.error('Payment error:', error);
+        alert('Ett fel uppstod vid betalning: ' + error.message);
+      }
+    });
+  });
 });
 
 function updateSubscriptionStatus(subscription) {
- const statusEl = document.getElementById('subscriptionStatus');
- 
- if (!subscription || subscription.status !== 'active') {
-   statusEl.innerHTML = `
-     <div class="bg-red-50 p-4 rounded-lg">
-       <p class="text-red-800">Inget aktivt abonnemang</p>
-     </div>
-   `;
- } else {
-   const endDate = new Date(subscription.current_period_end);
-   const formattedDate = endDate.toLocaleDateString('sv-SE', {
-     year: 'numeric',
-     month: 'long',
-     day: 'numeric'
-   });
-   
-   statusEl.innerHTML = `
-     <div class="bg-green-50 p-4 rounded-lg">
-       <p class="text-green-800">
-         Aktivt abonnemang till ${formattedDate}
-       </p>
-     </div>
-   `;
- }
+  const statusEl = document.getElementById('subscriptionStatus');
+  
+  if (!subscription || subscription.status !== 'active') {
+    statusEl.innerHTML = `
+      <div class="bg-red-50 p-4 rounded-lg">
+        <div class="flex items-center gap-3">
+          <div class="bg-red-100 p-2 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-medium text-red-800">Inget aktivt abonnemang</h3>
+            <p class="text-sm text-red-700 mt-1">Välj ett abonnemang nedan för att fortsätta använda tjänsten.</p>
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    const endDate = new Date(subscription.current_period_end);
+    const formattedDate = endDate.toLocaleDateString('sv-SE', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    statusEl.innerHTML = `
+      <div class="bg-green-50 p-4 rounded-lg">
+        <div class="flex items-center gap-3">
+          <div class="bg-green-100 p-2 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-medium text-green-800">Aktivt abonnemang</h3>
+            <p class="text-sm text-green-700 mt-1">Giltigt till ${formattedDate}</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 }
 </script>
