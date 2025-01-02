@@ -5,38 +5,48 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 ---
 
 <Layout title="Inköpslista">
- <div class="space-y-6">
-   <div class="flex items-center justify-between">
+ <div class="space-y-4">
+   <!-- Header Section -->
+   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-sm">
      <a href="/dashboard/inventory" class="inline-flex items-center text-gray-600 hover:text-gray-900">
        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
          <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L4.414 9H17a1 1 0 110 2H4.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd" />
        </svg>
-       Tillbaka till lager
+       Tillbaka
      </a>
      <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-       <span class="mr-1">Produkter att fylla på:</span>
+       <span class="mr-1">Att fylla på:</span>
        <span id="totalRestockItems">0</span>
      </span>
    </div>
 
-   <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+   <!-- Desktop View -->
+   <div class="hidden md:block bg-white rounded-lg shadow-sm">
      <div class="p-6 border-b border-gray-200">
        <h2 class="text-lg font-semibold text-gray-900">Inköpslista</h2>
      </div>
      <div class="overflow-x-auto">
-       <table class="min-w-full divide-y divide-gray-200">
+       <table class="w-full">
          <thead class="bg-gray-50">
            <tr>
-             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produkt</th>
-             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plats</th>
-             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nuvarande</th>
-             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Behöver</th>
-             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Åtgärder</th>
+             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produkt</th>
+             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plats</th>
+             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Nuvarande</th>
+             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Behövs</th>
+             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Åtgärder</th>
            </tr>
          </thead>
-         <tbody class="bg-white divide-y divide-gray-200" id="restockList">
+         <tbody id="restockListDesktop" class="divide-y divide-gray-200">
+           <!-- Desktop content injected by JavaScript -->
          </tbody>
        </table>
+     </div>
+   </div>
+
+   <!-- Mobile View -->
+   <div class="md:hidden">
+     <div id="restockListMobile" class="space-y-4">
+       <!-- Mobile content injected by JavaScript -->
      </div>
    </div>
  </div>
@@ -46,6 +56,15 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
  window.addEventListener('load', () => {
    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
    
+   const calculateNeeded = (product) => {
+     const needed = product.restock_amount - product.quantity;
+     return Math.max(0, needed);
+   };
+
+   const shouldShowComplete = (product) => {
+     return product.being_restocked && product.quantity > product.warning_level;
+   };
+
    const loadRestockItems = async () => {
      const { data: products, error } = await supabase
        .from('products')
@@ -67,8 +86,14 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
    };
 
    const updateRestockList = (products) => {
-     const container = document.getElementById('restockList');
-     
+     updateDesktopList(products);
+     updateMobileList(products);
+   };
+
+   const updateDesktopList = (products) => {
+     const container = document.getElementById('restockListDesktop');
+     if (!container) return;
+
      if (products.length === 0) {
        container.innerHTML = `
          <tr>
@@ -80,61 +105,100 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
        return;
      }
 
-     container.innerHTML = products.map(product => {
-       const needed = product.restock_amount - product.quantity;
-       return `
-         <tr>
-           <td class="px-6 py-4 whitespace-nowrap">${product.name}</td>
-           <td class="px-6 py-4 whitespace-nowrap">${product.location || '-'}</td>
-           <td class="px-6 py-4 whitespace-nowrap text-center">
-             <div class="flex items-center justify-center space-x-2">
-               <button 
-                 onclick="updateQuantity('${product.id}', ${product.quantity - 1})"
-                 class="p-1 rounded-lg hover:bg-gray-100"
-                 title="Minska"
-               >
-                 <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
-                 </svg>
-               </button>
-               
-               <input 
-                 type="number" 
-                 value="${product.quantity}"
-                 min="0"
-                 class="w-16 text-center border-gray-300 rounded-md focus:border-primary focus:ring-primary"
-                 onchange="updateQuantity('${product.id}', parseInt(this.value))"
-               />
-               
-               <button 
-                 onclick="updateQuantity('${product.id}', ${product.quantity + 1})"
-                 class="p-1 rounded-lg hover:bg-gray-100"
-                 title="Öka"
-               >
-                 <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                 </svg>
-               </button>
-             </div>
-           </td>
-           <td class="px-6 py-4 whitespace-nowrap text-center">
-             <span class="text-primary font-medium">${needed}</span>
-           </td>
-           <td class="px-6 py-4 whitespace-nowrap text-center">
-             <button 
-               onclick="markAsComplete('${product.id}', ${product.restock_amount})"
-               class="inline-flex items-center px-3 py-1 rounded-lg hover:bg-gray-100 text-green-600 transition-colors"
-               title="Markera som påfylld"
-             >
-               <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+     container.innerHTML = products.map(product => `
+       <tr>
+         <td class="px-6 py-4 whitespace-nowrap">${product.name}</td>
+         <td class="px-6 py-4 whitespace-nowrap">${product.location || '-'}</td>
+         <td class="px-6 py-4 whitespace-nowrap text-center">
+           <div class="flex items-center justify-center space-x-2">
+             <button onclick="updateQuantity('${product.id}', ${product.quantity - 1})" class="text-gray-500 hover:bg-gray-100 p-1 rounded">
+               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
                </svg>
-               Klar
              </button>
-           </td>
-         </tr>
+             <input type="number" value="${product.quantity}" min="0" 
+               class="w-16 text-center border-gray-300 rounded-md focus:border-primary focus:ring-primary"
+               onchange="updateQuantity('${product.id}', parseInt(this.value))" />
+             <button onclick="updateQuantity('${product.id}', ${product.quantity + 1})" class="text-gray-500 hover:bg-gray-100 p-1 rounded">
+               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+               </svg>
+             </button>
+           </div>
+         </td>
+         <td class="px-6 py-4 whitespace-nowrap text-center">
+           <span class="text-primary font-medium">${calculateNeeded(product)}</span>
+         </td>
+         <td class="px-6 py-4 whitespace-nowrap text-center">
+           ${shouldShowComplete(product) ? `
+           <button onclick="markAsComplete('${product.id}')"
+                   class="inline-flex items-center px-3 py-1 rounded-lg hover:bg-gray-100 text-green-600 transition-colors">
+             <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+             </svg>
+             Klar
+           </button>
+           ` : ''}
+         </td>
+       </tr>
+     `).join('');
+   };
+
+   const updateMobileList = (products) => {
+     const container = document.getElementById('restockListMobile');
+     if (!container) return;
+
+     if (products.length === 0) {
+       container.innerHTML = `
+         <div class="bg-white p-4 rounded-lg text-center text-gray-500">
+           Alla produkter har tillräckligt antal i lager
+         </div>
        `;
-     }).join('');
+       return;
+     }
+
+     container.innerHTML = products.map(product => `
+       <div class="bg-white rounded-lg shadow-sm p-4">
+         <div class="flex justify-between items-start mb-3">
+           <div>
+             <h3 class="font-medium text-gray-900">${product.name}</h3>
+             <p class="text-sm text-gray-600">${product.location || 'Ingen plats'}</p>
+           </div>
+           ${shouldShowComplete(product) ? `
+           <button onclick="markAsComplete('${product.id}')"
+                   class="text-green-600 p-2 hover:bg-green-50 rounded-lg">
+             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+             </svg>
+           </button>
+           ` : ''}
+         </div>
+         
+         <div class="flex items-center justify-between">
+           <div class="flex items-center gap-2">
+             <button onclick="updateQuantity('${product.id}', ${product.quantity - 1})"
+                     class="p-2 rounded-lg hover:bg-gray-100">
+               <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+               </svg>
+             </button>
+             <input type="number" value="${product.quantity}" min="0"
+                    class="w-16 text-center border-gray-300 rounded-lg focus:border-primary focus:ring-primary"
+                    onchange="updateQuantity('${product.id}', parseInt(this.value))" />
+             <button onclick="updateQuantity('${product.id}', ${product.quantity + 1})"
+                     class="p-2 rounded-lg hover:bg-gray-100">
+               <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+               </svg>
+             </button>
+           </div>
+           <div class="text-right">
+             <p class="text-sm text-gray-600">Behövs</p>
+             <p class="text-primary font-medium">${calculateNeeded(product)} st</p>
+           </div>
+         </div>
+       </div>
+     `).join('');
    };
 
    const updateStats = (products) => {
@@ -157,11 +221,10 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
      }
    };
 
-   window.markAsComplete = async (id, restockAmount) => {
+   window.markAsComplete = async (id) => {
      const { error } = await supabase
        .from('products')
        .update({ 
-         quantity: restockAmount,
          being_restocked: false
        })
        .eq('id', id);
