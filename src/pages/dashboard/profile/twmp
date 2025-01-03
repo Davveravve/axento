@@ -227,211 +227,195 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 </Layout>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  // Vänta tills Supabase är tillgänglig
-  const waitForSupabase = () => {
-    return new Promise((resolve) => {
-      const checkSupabase = () => {
-        if (window.globalSupabase) {
-          resolve(window.globalSupabase);
-        } else {
-          setTimeout(checkSupabase, 100);
-        }
-      };
-      checkSupabase();
-    });
-  };
+window.addEventListener('load', async () => {
+  const supabase = window.globalSupabase;
+  if (!supabase) {
+    console.error('Supabase not initialized');
+    return;
+  }
+  let currentUser = null;
 
-  // Starta huvudkoden när Supabase är redo
-  waitForSupabase().then(async (supabase) => {
-    try {
-      // Hämta användarinfo
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        window.location.href = '/login';
-        return;
-      }
-
-      const currentUser = session.user;
-
-      // Uppdatera email och admin panel
-      const userEmailElement = document.getElementById('userEmail');
-      if (userEmailElement && session?.user?.email) {
-        userEmailElement.textContent = session.user.email;
-        
-        if (currentUser.email === 'davveravve@gmail.com') {
-          const adminHtml = `
-            <div class="mt-2">
-              <a href="/dashboard/admin" class="text-primary hover:text-primary/80 text-sm font-medium flex items-center gap-1">
-                Admin Panel
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-              </a>
-            </div>
-          `;
-          userEmailElement.parentNode.insertAdjacentHTML('beforeend', adminHtml);
-        }
-      }
-
-      // Visa senaste inloggning
-      const lastLoginElement = document.getElementById('lastLogin');
-      if (lastLoginElement && currentUser.last_sign_in_at) {
-        const lastLoginDate = new Date(currentUser.last_sign_in_at);
-        const formattedDate = lastLoginDate.toLocaleDateString('sv-SE', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        lastLoginElement.textContent = `Senast inloggad: ${formattedDate}`;
-      }
-
-      // Hämta prenumerationsstatus
-      try {
-        const { data: subscriptions, error } = await supabase
-          .from('subscriptions')
-          .select('*')
-          .eq('user_id', currentUser.id);
-
-        const subscription = subscriptions?.[0];
-
-        if (error) {
-          console.error('Subscription fetch error:', error);
-        } else {
-          updateSubscriptionStatus(subscription);
-        }
-      } catch (error) {
-        console.error('Subscription error:', error);
-      }
-
-      // Sätt upp event listeners
-      setupEventListeners(supabase, currentUser);
-
-    } catch (error) {
-      console.error('Session error:', error);
-    }
-  });
-});
-
-// Funktion för att sätta upp event listeners
-function setupEventListeners(supabase, currentUser) {
-  // Modal handlers
-  window.closeChangePasswordModal = () => {
-    document.getElementById('changePasswordModal').classList.add('hidden');
-    document.getElementById('changePasswordForm').reset();
-  };
-
-  window.closeDeleteAccountModal = () => {
-    document.getElementById('deleteAccountModal').classList.add('hidden');
-  };
-
-  // Öppna modaler
-  document.getElementById('changePasswordBtn')?.addEventListener('click', () => {
-    document.getElementById('changePasswordModal').classList.remove('hidden');
-  });
-
-  document.getElementById('deleteAccountBtn')?.addEventListener('click', () => {
-    document.getElementById('deleteAccountModal').classList.remove('hidden');
-  });
-
-  // Hantera lösenordsbyte
-  document.getElementById('changePasswordForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const newPassword = document.getElementById('newPassword').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-
-    if (newPassword !== confirmPassword) {
-      alert('Lösenorden matchar inte');
+  try {
+    // Hämta användarinfo
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      window.location.href = '/login';
       return;
     }
 
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
-      alert('Lösenord uppdaterat');
-      closeChangePasswordModal();
-    } catch (error) {
-      alert('Ett fel uppstod: ' + error.message);
-    }
-  });
+    currentUser = session.user;
 
-  // Hantera radering av konto
-  window.confirmDeleteAccount = async () => {
-    try {
-      await supabase.from('products').delete().eq('user_id', currentUser.id);
-      await supabase.from('locations').delete().eq('user_id', currentUser.id);
-      await supabase.from('subscriptions').delete().eq('user_id', currentUser.id);
-      await supabase.auth.signOut();
-      window.location.href = '/';
-    } catch (error) {
-      alert('Ett fel uppstod: ' + error.message);
-    }
-  };
-
-  // Hantera prenumerationskort
-  document.querySelectorAll('.subscription-card').forEach(card => {
-    card.addEventListener('click', async () => {
-      try {
-        const months = parseInt(card.dataset.months);
-        const response = await fetch('/api/create-checkout-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ months, userId: currentUser.id })
-        });
-
-        const { url, error } = await response.json();
-        if (error) throw new Error(error);
-        window.location.href = url;
-      } catch (error) {
-        console.error('Payment error:', error);
-        alert('Ett fel uppstod vid betalning: ' + error.message);
+    // Uppdatera email och admin panel
+    const userEmailElement = document.getElementById('userEmail');
+    if (userEmailElement) {
+      userEmailElement.textContent = currentUser.email || 'Ingen email angiven';
+      
+      if (currentUser.email === 'davveravve@gmail.com') {
+        const adminHtml = `
+          <div class="mt-2">
+            <a href="/dashboard/admin" class="text-primary hover:text-primary/80 text-sm font-medium flex items-center gap-1">
+              Admin Panel
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+        `;
+        userEmailElement.parentNode.insertAdjacentHTML('beforeend', adminHtml);
       }
-    });
-  });
+    }
 
-  // Hantera kampanjkod
-  document.getElementById('applyPromoBtn')?.addEventListener('click', async () => {
-    const code = document.getElementById('promoCode').value;
-    if (!code) return;
+    // Visa senaste inloggning
+    const lastLoginElement = document.getElementById('lastLogin');
+    if (lastLoginElement && currentUser.last_sign_in_at) {
+      const lastLoginDate = new Date(currentUser.last_sign_in_at);
+      const formattedDate = lastLoginDate.toLocaleDateString('sv-SE', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      lastLoginElement.textContent = `Senast inloggad: ${formattedDate}`;
+    }
 
+    // Hämta subscription med error hantering
     try {
-      const { data, error } = await supabase
-        .from('promo_codes')
+      const { data: subscription, error } = await supabase
+        .from('subscriptions')
         .select('*')
-        .eq('code', code)
+        .eq('user_id', currentUser.id)
         .single();
 
-      if (error || !data) {
-        alert('Ogiltig kod');
+      if (error) {
+        console.error('Subscription fetch error:', error);
+      } else {
+        updateSubscriptionStatus(subscription);
+      }
+    } catch (error) {
+      console.error('Subscription error:', error);
+    }
+
+    // Sätt upp event listeners för modaler
+    document.getElementById('changePasswordBtn')?.addEventListener('click', () => {
+      document.getElementById('changePasswordModal').classList.remove('hidden');
+    });
+
+    document.getElementById('deleteAccountBtn')?.addEventListener('click', () => {
+      document.getElementById('deleteAccountModal').classList.remove('hidden');
+    });
+
+    // Hantera lösenordsbyte
+    document.getElementById('changePasswordForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (newPassword !== confirmPassword) {
+        alert('Lösenorden matchar inte');
         return;
       }
 
-      const { error: subError } = await supabase
-        .from('subscriptions')
-        .upsert({
-          user_id: currentUser.id,
-          status: 'trial',
-          current_period_end: new Date(Date.now() + data.duration_days * 24 * 60 * 60 * 1000)
-        });
+      try {
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+        alert('Lösenord uppdaterat');
+        closeChangePasswordModal();
+      } catch (error) {
+        alert('Ett fel uppstod: ' + error.message);
+      }
+    });
 
-      if (subError) throw subError;
+    // Hantera kampanjkod
+    document.getElementById('applyPromoBtn')?.addEventListener('click', async () => {
+      const code = document.getElementById('promoCode').value;
+      if (!code) return;
 
-      alert('Kampanjkod aktiverad!');
-      location.reload();
-    } catch (error) {
-      alert('Ett fel uppstod: ' + error.message);
-    }
-  });
-}
+      try {
+        const { data, error } = await supabase
+          .from('promo_codes')
+          .select('*')
+          .eq('code', code)
+          .single();
 
-// Funktion för att uppdatera prenumerationsstatus
+        if (error || !data) {
+          alert('Ogiltig kod');
+          return;
+        }
+
+        const { error: subError } = await supabase
+          .from('subscriptions')
+          .upsert({
+            user_id: currentUser.id,
+            status: 'trial',
+            current_period_end: new Date(Date.now() + data.duration_days * 24 * 60 * 60 * 1000)
+          });
+
+        if (subError) throw subError;
+
+        alert('Kampanjkod aktiverad!');
+        location.reload();
+      } catch (error) {
+        alert('Ett fel uppstod: ' + error.message);
+      }
+    });
+
+    // Hantera prenumerationskort
+    document.querySelectorAll('.subscription-card').forEach(card => {
+      card.addEventListener('click', async () => {
+        try {
+          const months = parseInt(card.dataset.months);
+          const response = await fetch('/api/create-checkout-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ months, userId: currentUser.id })
+          });
+
+          const { url, error } = await response.json();
+          if (error) throw new Error(error);
+          window.location.href = url;
+        } catch (error) {
+          console.error('Payment error:', error);
+          alert('Ett fel uppstod vid betalning: ' + error.message);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Session error:', error);
+  }
+});
+
+// Modal handlers
+window.closeChangePasswordModal = () => {
+  document.getElementById('changePasswordModal').classList.add('hidden');
+  document.getElementById('changePasswordForm').reset();
+};
+
+window.closeDeleteAccountModal = () => {
+  document.getElementById('deleteAccountModal').classList.add('hidden');
+};
+
+// Radera konto
+window.confirmDeleteAccount = async () => {
+  try {
+    const supabase = window.globalSupabase;
+    
+    // Radera användardata
+    await supabase.from('products').delete().eq('user_id', currentUser.id);
+    await supabase.from('locations').delete().eq('user_id', currentUser.id);
+    await supabase.from('subscriptions').delete().eq('user_id', currentUser.id);
+    
+    // Logga ut användaren
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  } catch (error) {
+    alert('Ett fel uppstod: ' + error.message);
+  }
+};
+
 function updateSubscriptionStatus(subscription) {
   const statusEl = document.getElementById('subscriptionStatus');
-  if (!statusEl) return;
-
-  // Om ingen subscription eller inaktiv
+  
   if (!subscription || subscription.status !== 'active') {
     statusEl.innerHTML = `
       <div class="bg-red-50 p-4 rounded-lg">
@@ -449,7 +433,6 @@ function updateSubscriptionStatus(subscription) {
       </div>
     `;
   } else {
-    // Om aktiv subscription finns...
     const endDate = new Date(subscription.current_period_end);
     const formattedDate = endDate.toLocaleDateString('sv-SE', {
       year: 'numeric',
